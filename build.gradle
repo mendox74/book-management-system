@@ -1,0 +1,91 @@
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
+plugins {
+	id 'org.springframework.boot' version '3.2.3'
+	id 'io.spring.dependency-management' version '1.1.4'
+	id 'org.jetbrains.kotlin.jvm' version '1.9.22'
+	id 'org.jetbrains.kotlin.plugin.spring' version '1.9.22'
+	id 'nu.studer.jooq' version '7.1.1'
+}
+
+group = 'com.book.management'
+version = '0.0.1-SNAPSHOT'
+
+java {
+	sourceCompatibility = '17'
+}
+
+configurations {
+	compileOnly {
+		extendsFrom annotationProcessor
+	}
+}
+
+repositories {
+	mavenCentral()
+	maven { url 'https://repo.spring.io/milestone' }
+	maven { url 'https://repo.spring.io/snapshot' }
+}
+
+dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter-jooq'
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation 'com.fasterxml.jackson.module:jackson-module-kotlin'
+	implementation 'org.jetbrains.kotlin:kotlin-reflect'
+    implementation 'org.springframework.boot:spring-boot-starter-jdbc'
+    runtimeOnly 'com.mysql:mysql-connector-j'
+	compileOnly 'org.projectlombok:lombok'
+	developmentOnly 'org.springframework.boot:spring-boot-devtools'
+	annotationProcessor 'org.projectlombok:lombok'
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    jooqGenerator "com.mysql:mysql-connector-j"
+    jooqGenerator "jakarta.xml.bind:jakarta.xml.bind-api:3.0.1"
+}
+
+import org.jooq.meta.jaxb.Logging
+
+jooq {
+    version = '3.18.4'
+    edition = nu.studer.gradle.jooq.JooqEdition.OSS
+
+    configurations {
+        main { 
+			generateSchemaSourceOnCompilation = true
+            generationTool {
+				logging = Logging.WARN
+				jdbc {
+					url = 'jdbc:mysql://localhost:3306/'
+					user = 
+					password = 
+                }
+                generator {
+                    name = 'org.jooq.codegen.KotlinGenerator'
+                    database {
+                        name = 'org.jooq.meta.mysql.MySQLDatabase'
+                        inputSchema = ''
+                    }
+                    target {
+						packageName = 'com.book.management.demo.generated.jooq'
+                    }
+                    strategy.name = 'org.jooq.codegen.DefaultGeneratorStrategy'
+                }
+            }
+        }
+    }
+}
+
+tasks.withType(KotlinCompile) {
+	kotlinOptions {
+		freeCompilerArgs += '-Xjsr305=strict'
+		jvmTarget = '17'
+	}
+}
+
+tasks.named('test') {
+	useJUnitPlatform()
+}
+
+compileKotlin {
+	dependsOn generateJooq
+	sourceSets.main.kotlin.srcDirs("build/generated-src/jooq/main")
+}
